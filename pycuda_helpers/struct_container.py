@@ -51,4 +51,5 @@ class StructContainer(object):
     def sync_from_device(self):
         object_array = cuda.from_device_like(self.d_object_array,
                                              self.object_array)
-        self.object_list = [self.object_class(*obj) for obj in object_array]
+        self.object_list = [self.object_class.from_array([int(ptr)
+                for ptr in obj]) for obj in object_array]
