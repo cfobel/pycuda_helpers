@@ -1,3 +1,4 @@
+import sys
 from pprint import pprint
 
 from path import path
@@ -6,7 +7,9 @@ import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
 import numpy as np
 
-from struct_container import StructContainer
+sys.path.insert(0, path(__file__).abspath().parent)
+from pycuda_helpers.struct_container import StructContainer
+from pycuda_helpers import get_include_root
 
 
 m = SourceModule(r'''
@@ -36,7 +39,7 @@ extern "C" {
     }
 }
 ''', arch='compute_20', code='sm_20', keep=True,
-                 include_dirs=[path('pycuda_include').abspath()],
+                 include_dirs=[get_include_root()],
                  no_extern_c=True)
 
 
@@ -69,6 +72,10 @@ def main(foo_count, bar_count=5):
     for bar in bar_list:
         bar.sync_from_device()
     pprint(bar_list)
+
+
+def test():
+    main(10)
 
 
 if __name__ == '__main__':
