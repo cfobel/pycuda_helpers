@@ -1,5 +1,8 @@
+from pprint import pprint
+
 from path import path
 import pycuda.autoinit
+import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
 import numpy as np
 
@@ -20,11 +23,14 @@ public:
 typedef StructContainer<Foo> Bar;
 
 extern "C" {
-    __global__ void test_kernel(Bar *bar) {
+    __global__ void test_kernel(int32_t bar_count, Bar **bar_array) {
         if(threadIdx.x == 0 && blockIdx.x == 0) {
-            printf("Bar.object_count: %d\n", bar[0].object_count());
-            for(int i = 0; i < bar[0].object_count(); i++) {
-                bar[0].objects_[i].foobar_ += 10;
+            for(int b = 0; b < bar_count; b++) {
+                Bar &bar = *bar_array[b];
+                printf("Bar.object_count: %d\n", bar.object_count());
+                for(int i = 0; i < bar.object_count(); i++) {
+                    bar.objects_[i].foobar_ += 10 + 100 * (b + 1);
+                }
             }
         }
     }
@@ -48,18 +54,21 @@ class Foo(object):
         return np.array([self.foobar], dtype=np.uint32)
 
 
-def main(foo_count):
+def main(foo_count, bar_count=5):
     t = m.get_function('test_kernel')
 
-    bar = StructContainer(Foo, [Foo(i) for i in range(foo_count)])
-    bar_array = bar.sync_to_device()
+    bar_list = [StructContainer(Foo, [Foo(i) for i in range(foo_count)])
+                for b in range(bar_count)]
+    bar_arrays = [bar.sync_to_device() for bar in bar_list]
 
-    print bar
+    pprint(bar_list)
 
-    t(bar_array, block=(1, 1, 1))
+    t(np.int32(len(bar_list)), cuda.In(np.array(bar_arrays, dtype=np.intp)),
+        block=(len(bar_list), 1, 1))
 
-    bar.sync_from_device()
-    print bar
+    for bar in bar_list:
+        bar.sync_from_device()
+    pprint(bar_list)
 
 
 if __name__ == '__main__':
