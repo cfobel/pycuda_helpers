@@ -1,6 +1,6 @@
 from __future__ import division
 
-from jinja2 import Template, FileSystemLoader, Environment
+from jinja2 import FileSystemLoader, Environment
 from path import path
 import numpy as np
 import pycuda.autoinit
@@ -52,7 +52,8 @@ def get_cuda_function(template_name, function_namebase, dtype=None,
 
     code_template = jinja_env.get_template(template_name)
     mod = SourceModule(code_template.render(template_params), no_extern_c=True,
-            options=['-I%s' % get_include_root()])
+            include_dirs=[get_include_root(),
+                    '/home/christian/Documents/dev/fpga_placement/VPR_v5/VPR_HET/pyvpr/pycuda_include',])
 
     if dtype is None:
         func_name = function_namebase

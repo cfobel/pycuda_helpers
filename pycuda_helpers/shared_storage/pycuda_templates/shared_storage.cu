@@ -1,6 +1,9 @@
+#include <stdio.h>
 #include <stdint.h>
 #include <assert.h>
 #include "SharedStorage.hpp"
+#include "Point.hpp"
+#include "SwapConfig.hpp"
 
 using shared_storage::SharedStorage;
 using shared_storage::SharedStorageBase;
@@ -25,12 +28,24 @@ extern "C" __global__ void test_shared_storage_{{ c_type }}(uint32_t *capacity_p
 }
 {% endfor %}
 
+class NetDeltaCostInfo {
+public:
+    MoveData<Point<float> > sum_;
+    MoveData<Point<float> > sq_sum_;
+    uint32_t cardinality_;
+    int32_t net_id_;
+};
 
 class TestData {
 public:
-    int32_t *a_;
-    uint16_t *b_;
-    float *c_;
+    MoveData<int32_t> *ids_;
+    MoveData<Point<int32_t> > *coords_;
+
+    /* Use `uint8_t` instead of `bool` to avoid special handling in case `bool`
+     * instances are allocated differently on CUDA/CPU. */
+    uint8_t *master_;
+    uint8_t *participate_;
+    uint8_t *accepted_;
 };
 
 
@@ -41,13 +56,17 @@ public:
             : SharedStorageBase<TestData>(id, capacity, thread_contexts, data) {
     }
 
-    __device__ void append(int32_t a, uint16_t b, float c) {
+    __device__ void append(MoveData<int32_t> const &ids,
+            MoveData<Point<int32_t> > const &coords, uint8_t const &master,
+            uint8_t const &participate, uint8_t const &accepted) {
         uint32_t id = this->get_id();
         assert(id < this->capacity_);
         this->thread_contexts_[id] = ThreadContext(blockIdx.x, threadIdx.x);
-        this->data_->a_[id] = a;
-        this->data_->b_[id] = b;
-        this->data_->c_[id] = c;
+        this->data_->ids_[id] = ids;
+        this->data_->coords_[id] = coords;
+        this->data_->master_[id] = master;
+        this->data_->participate_[id] = participate;
+        this->data_->accepted_[id] = accepted;
     }
 };
 
@@ -59,5 +78,11 @@ extern "C" __global__ void test_shared_storage_multiarray(uint32_t *capacity_ptr
     //storage.append(blockIdx.x * 10000 + threadIdx.x);
     SharedTestMultiArray storage(&g__shared_storage_id, *capacity_ptr,
             thread_contexts, data);
-    storage.append(blockIdx.x, threadIdx.x, threadIdx.x);
+    storage.append(
+            MoveData<int32_t>(blockIdx.x, blockIdx.x), 
+            MoveData<Point<int32_t> >(Point<int32_t>(blockIdx.x, blockIdx.x),
+                    Point<int32_t>(threadIdx.x, threadIdx.x)),
+            blockIdx.x % 2,
+            threadIdx.x % 2,
+            threadIdx.x % 4);
 }

@@ -34,9 +34,11 @@ def shared_storage_multiarray(threads_per_block, block_count):
 
     total_thread_count = threads_per_block * block_count
     data = OrderedDict([
-        ('a', np.empty(total_thread_count, dtype=np.int32)),
-        ('b', np.empty(total_thread_count, dtype=np.uint16)),
-        ('c', np.empty(total_thread_count, dtype=np.float32)),
+        ('ids_', np.empty((total_thread_count, 2), dtype=np.int32)),
+        ('coords_', np.empty((4 * total_thread_count), dtype=np.uint16)),
+        ('master_', np.empty(total_thread_count, dtype=np.uint8)),
+        ('participate_', np.empty(total_thread_count, dtype=np.uint8)),
+        ('accepted_', np.empty(total_thread_count, dtype=np.uint8)),
     ])
     data_struct = MultiArrayPointers(data.values(), copy_to=False)
     thread_contexts = np.empty((total_thread_count, 2), dtype=np.uint32)
@@ -52,7 +54,9 @@ def shared_storage_multiarray(threads_per_block, block_count):
 
     test(cuda.InOut(capacity), cuda.Out(thread_contexts),
          data_struct.struct_ptr, block=block, grid=grid)
-    return capacity[0], data_struct, thread_contexts
+    for key, value in zip(data.keys(), data_struct.get_from_device()):
+        data[key] = value
+    return capacity[0], data, thread_contexts
 
 
 if __name__ == '__main__':

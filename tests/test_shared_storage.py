@@ -50,26 +50,39 @@ def _single_shared_storage_test(threads_per_block, block_count):
 
 @nottest
 def _single_shared_storage_multiarray_test(threads_per_block, block_count):
-    occupancy, data_struct, thread_contexts = shared_storage_multiarray(
+    occupancy, data, thread_contexts = shared_storage_multiarray(
             threads_per_block=threads_per_block, block_count=block_count)
-    a, b, c = data_struct.get_from_device()
+    import pudb; pudb.set_trace()
 
     ordered_contexts = sorted(set([tuple(context)
             for context in thread_contexts]))
     expected_contexts = [(block_id, thread_id)
             for block_id in range(block_count)
                          for thread_id in range(threads_per_block)]
-    expected_a = np.array(sorted([block_id for block_id in range(block_count)
-                  for thread_id in range(threads_per_block)]), dtype=np.int32)
-    expected_b = np.array(sorted([thread_id for block_id in range(block_count)
-                  for thread_id in range(threads_per_block)]), dtype=np.uint16)
-    expected_c = expected_b.astype(np.float32)
+    expected_a = np.array([(block_id, block_id)
+                           for block_id in range(block_count)
+                           for thread_id in range(threads_per_block)],
+                          dtype=np.int32)
+    expected_b = np.array([thread_id for block_id in range(block_count)
+                           for thread_id in range(threads_per_block)],
+                          dtype=np.uint16)
 
     labels = ('CPU', 'CUDA')
-    all_close(ordered_contexts, expected_contexts, labels=labels)
-    all_close(np.array(sorted(a)), expected_a, labels=labels)
-    all_close(np.array(sorted(b)), expected_b, labels=labels)
-    all_close(np.array(sorted(c)), expected_c, labels=labels)
+
+    # Since the order of the CUDA results is non-deterministic, sort data
+    # arrays for validation.
+    for data_array in [expected_a, expected_b, a, b, c]:
+        data_array.sort(axis=0)
+
+    expected_c = expected_b.astype(np.float32)
+
+    try:
+        all_close(ordered_contexts, expected_contexts, labels=labels)
+        all_close(a, expected_a, labels=labels)
+        all_close(b, expected_b, labels=labels)
+        all_close(c, expected_c, labels=labels)
+    except:
+        import pudb; pudb.set_trace()
 
 
 def shared_storage_test():
