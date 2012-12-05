@@ -12,6 +12,16 @@ namespace shared_storage {
 
 
 class ThreadContext {
+/*
+ * This class enables a shared array of type `T` to be filled co-operatively
+ * within a CUDA kernel by serializing write access to subsequent positions.
+ *
+ * In addition, as part of the default behaviour of `SharedStorage`, when each
+ * item is appended to the `data_` array, the block index and thread index are
+ * recorded in a separate `ThreadContext` array.  This makes it
+ * straight-forward to reference the data according to the thread that produced
+ * it.
+ */
 public:
     uint32_t block_idx_;
     uint32_t thread_idx_;

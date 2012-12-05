@@ -21,7 +21,8 @@ def shared_storage(threads_per_block=1024, block_count=1):
     print 'thread_count: %d' % threads_per_block
     print 'block_count: %d' % block_count
 
-    test(cuda.InOut(capacity), cuda.Out(thread_contexts), cuda.Out(data), block=block, grid=grid)
+    test(cuda.InOut(capacity), cuda.Out(thread_contexts), cuda.Out(data),
+            block=block, grid=grid)
     return capacity[0], data, thread_contexts
 
 

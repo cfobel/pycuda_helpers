@@ -10,6 +10,8 @@ setup(name = "pycuda_helpers",
     url = "https://github.com/cfobel/pycuda_helpers",
     license = "GPL",
     long_description = """""",
-    packages = ['pycuda_helpers'],
-    package_data={'pycuda_helpers': ['pycuda_include/*']}
+    packages = ['pycuda_helpers', 'pycuda_helpers.shared_storage'],
+    package_data={'pycuda_helpers': ['pycuda_include/*'],
+                  'pycuda_helpers.shared_storage': ['pycuda_templates/*',
+                          'pycuda_include/*']}
 )
