@@ -2,6 +2,7 @@
 #include "SharedStorage.hpp"
 
 using shared_storage::SharedStorage;
+using shared_storage::ThreadContext;
 
 {% if not c_types -%}
 {%- set c_types=["int32_t"] -%}
@@ -15,8 +16,9 @@ __device__ uint32_t g__shared_storage_id = 0;
 #define COUNT {{ count }}
 typedef {{ c_type }} C_{{i}};
 extern "C" __global__ void test_shared_storage_{{ c_type }}(uint32_t *capacity_ptr,
-        C_{{i}} *data) {
-    SharedStorage<C_{{i}}> storage(&g__shared_storage_id, *capacity_ptr, data);
+        ThreadContext *thread_contexts, C_{{i}} *data) {
+    SharedStorage<C_{{i}}> storage(&g__shared_storage_id, *capacity_ptr,
+            thread_contexts, data);
     storage.append(blockIdx.x * 10000 + threadIdx.x);
 }
 {% endfor %}
