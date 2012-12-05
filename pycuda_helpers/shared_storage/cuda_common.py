@@ -18,6 +18,7 @@ def package_root():
     try:
         script = path(__file__)
     except NameError:
+        import sys
         script = path(sys.argv[0])
     return script.parent.abspath()
 
@@ -42,7 +43,7 @@ def log2ceil(x):
 jinja_env = Environment(loader=get_template_loader())
 
 
-def get_cuda_function(template_name, function_namebase, dtype,
+def get_cuda_function(template_name, function_namebase, dtype=None,
         template_params=None, supported_types=None):
     if supported_types is None:
         supported_types = dtype_map.keys()
@@ -51,12 +52,14 @@ def get_cuda_function(template_name, function_namebase, dtype,
 
     code_template = jinja_env.get_template(template_name)
     mod = SourceModule(code_template.render(template_params), no_extern_c=True,
-            options=['-I%s' % get_include_root()], keep=True)
+            options=['-I%s' % get_include_root()])
 
-    assert(dtype in supported_types)
-
-    try:
+    if dtype is None:
+        func_name = function_namebase
+    else:
+        assert(dtype in supported_types)
         func_name = '%s_%s' % (function_namebase, dtype_map[dtype])
+    try:
         func = mod.get_function(func_name)
     except cuda.LogicError:
         print dtype, func_name

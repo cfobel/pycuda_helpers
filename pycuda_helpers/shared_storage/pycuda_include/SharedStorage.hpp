@@ -34,7 +34,7 @@ public:
 
 
 template <class T>
-class SharedStorage {
+class SharedStorageBase {
 public:
     ThreadContext *thread_contexts_;
     T *data_;
@@ -43,7 +43,7 @@ public:
     /* Note: the following must be a pointer to a device global variable. */
     uint32_t *id_;
 
-    __device__ SharedStorage(uint32_t *id, uint32_t capacity,
+    __device__ SharedStorageBase(uint32_t *id, uint32_t capacity,
             ThreadContext *thread_contexts, T *data)
             : id_(id), capacity_(capacity), thread_contexts_(thread_contexts),
             data_(data) {}
@@ -57,13 +57,22 @@ public:
         uint32_t value = atomicAdd(id_, 1);
         return value;
     }
+};
+
+
+template <class T>
+class SharedStorage : public SharedStorageBase<T> {
+public:
+    __device__ SharedStorage(uint32_t *id, uint32_t capacity,
+            ThreadContext *thread_contexts, T *data)
+            : SharedStorageBase<T>(id, capacity, thread_contexts, data) {}
 
     __device__ T& append(T const &item) {
-        uint32_t id = get_id();
-        assert(id < capacity_);
-        thread_contexts_[id] = ThreadContext(blockIdx.x, threadIdx.x);
-        data_[id] = item;
-        return data_[id];
+        uint32_t id = this->get_id();
+        assert(id < this->capacity_);
+        this->thread_contexts_[id] = ThreadContext(blockIdx.x, threadIdx.x);
+        this->data_[id] = item;
+        return this->data_[id];
     }
 };
 
