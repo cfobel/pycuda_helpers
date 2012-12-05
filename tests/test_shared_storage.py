@@ -1,7 +1,20 @@
 from __future__ import division
 
 from nose.tools import eq_, nottest
-from ..shared_storage.cuda import shared_storage
+
+try:
+    from shared_storage.cuda import shared_storage
+except ImportError:
+    import logging
+    import sys
+    from path import path
+
+    module_root = path(__file__).parent.parent
+    sys.path.insert(0, module_root)
+
+    from pycuda_helpers.shared_storage.cuda import shared_storage
+    logging.warning('Manually adding module root to Python path: %s' % (
+            module_root))
 
 
 @nottest
