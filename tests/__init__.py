@@ -30,4 +30,5 @@ The following %%d elements have different values: %%s
             list(np.absolute(np_array2[conflicts] - np_array1[conflicts]
                     ) / np.maximum(np_array2[conflicts],
                         np_array1[conflicts]) * 100))
+
         raise ValueError, message

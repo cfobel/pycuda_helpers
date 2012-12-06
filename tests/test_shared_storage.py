@@ -47,42 +47,66 @@ def _single_shared_storage_test(threads_per_block, block_count):
     eq_(sorted(data), expected_data)
 
 
+def np_sort_rows(a, inplace=True):
+    if len(a.shape) == 1:
+        result = np.sort(a)
+    elif len(a.shape) > 1:
+        result = np.sort(a.view([('', a.dtype)] * a.shape[1]), 0).view(a.dtype)
+    else:
+        raise ValueError, 'Array must have one or more dimension'
+
+    if inplace:
+        a[:] = result[:]
+    return result
+
 
 @nottest
 def _single_shared_storage_multiarray_test(threads_per_block, block_count):
     occupancy, data, thread_contexts = shared_storage_multiarray(
             threads_per_block=threads_per_block, block_count=block_count)
-    import pudb; pudb.set_trace()
-
-    ordered_contexts = sorted(set([tuple(context)
-            for context in thread_contexts]))
-    expected_contexts = [(block_id, thread_id)
-            for block_id in range(block_count)
-                         for thread_id in range(threads_per_block)]
-    expected_a = np.array([(block_id, block_id)
-                           for block_id in range(block_count)
-                           for thread_id in range(threads_per_block)],
-                          dtype=np.int32)
-    expected_b = np.array([thread_id for block_id in range(block_count)
-                           for thread_id in range(threads_per_block)],
-                          dtype=np.uint16)
 
     labels = ('CPU', 'CUDA')
 
-    # Since the order of the CUDA results is non-deterministic, sort data
-    # arrays for validation.
-    for data_array in [expected_a, expected_b, a, b, c]:
-        data_array.sort(axis=0)
+    contexts = np.array(list(set([tuple(context)
+            for context in thread_contexts])))
+    expected_contexts = np.array([(block_id, thread_id)
+            for block_id in range(block_count)
+                         for thread_id in range(threads_per_block)])
+    np_sort_rows(contexts)
+    np_sort_rows(expected_contexts)
+    np.allclose(contexts, expected_contexts)
 
-    expected_c = expected_b.astype(np.float32)
+    expected = OrderedDict()
+    expected['ids'] = np.array([(block_id, block_id)
+                           for block_id in range(block_count)
+                           for thread_id in range(threads_per_block)],
+                          dtype=np.int32)
+    expected['coords'] = np.array([(block_id, block_id, thread_id, thread_id, )
+                           for block_id in range(block_count)
+                           for thread_id in range(threads_per_block)],
+                          dtype=np.uint32)
+    expected['master'] = np.array([block_id % 2
+                           for block_id in range(block_count)
+                           for thread_id in range(threads_per_block)],
+                          dtype=np.uint8)
+    expected['accepted'] = np.array([thread_id % 2
+                           for block_id in range(block_count)
+                           for thread_id in range(threads_per_block)],
+                          dtype=np.uint8)
+    expected['participate'] = np.array([thread_id % 4
+                           for block_id in range(block_count)
+                           for thread_id in range(threads_per_block)],
+                          dtype=np.uint8)
 
-    try:
-        all_close(ordered_contexts, expected_contexts, labels=labels)
-        all_close(a, expected_a, labels=labels)
-        all_close(b, expected_b, labels=labels)
-        all_close(c, expected_c, labels=labels)
-    except:
-        import pudb; pudb.set_trace()
+    for key in data.keys():
+        # Since the order of the CUDA results is non-deterministic, sort data
+        # arrays for validation.
+        np_sort_rows(data[key])
+        np_sort_rows(expected[key])
+        eq_(data[key].size, expected[key].size)
+        eq_(expected[key].shape, data[key].shape)
+        all_close(expected[key], data[key],
+                  labels=tuple(['%s (%s)' % (key, l) for l in labels]))
 
 
 def shared_storage_test():

@@ -34,11 +34,11 @@ def shared_storage_multiarray(threads_per_block, block_count):
 
     total_thread_count = threads_per_block * block_count
     data = OrderedDict([
-        ('ids_', np.empty((total_thread_count, 2), dtype=np.int32)),
-        ('coords_', np.empty((4 * total_thread_count), dtype=np.uint16)),
-        ('master_', np.empty(total_thread_count, dtype=np.uint8)),
-        ('participate_', np.empty(total_thread_count, dtype=np.uint8)),
-        ('accepted_', np.empty(total_thread_count, dtype=np.uint8)),
+        ('ids', np.empty((total_thread_count, 2), dtype=np.int32)),
+        ('coords', np.empty((total_thread_count, 4), dtype=np.uint32)),
+        ('master', np.empty(total_thread_count, dtype=np.uint8)),
+        ('accepted', np.empty(total_thread_count, dtype=np.uint8)),
+        ('participate', np.empty(total_thread_count, dtype=np.uint8)),
     ])
     data_struct = MultiArrayPointers(data.values(), copy_to=False)
     thread_contexts = np.empty((total_thread_count, 2), dtype=np.uint32)
