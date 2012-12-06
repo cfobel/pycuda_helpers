@@ -50,8 +50,16 @@ def _single_shared_storage_test(threads_per_block, block_count):
 def np_sort_rows(a, inplace=True):
     if len(a.shape) == 1:
         result = np.sort(a)
-    elif len(a.shape) > 1:
+    elif len(a.shape) == 2:
         result = np.sort(a.view([('', a.dtype)] * a.shape[1]), 0).view(a.dtype)
+    elif len(a.shape) > 2:
+        # To sort by rows, we first reduce the dimensionality down to 2, sort
+        # the resulting rows, then reshape the array to its original
+        # dimensions.
+        result = a.copy()
+        result.shape = result.shape[0], -1
+        np_sort_rows(result)
+        result.shape = a.shape
     else:
         raise ValueError, 'Array must have one or more dimension'
 
@@ -97,6 +105,31 @@ def _single_shared_storage_multiarray_test(threads_per_block, block_count):
                            for block_id in range(block_count)
                            for thread_id in range(threads_per_block)],
                           dtype=np.uint8)
+
+    expected['sum_arrays'] = np.array([thread_id % 4
+                           for block_id in range(block_count)
+                           for thread_id in range(threads_per_block)],
+                          dtype=np.uint8)
+
+    expected['sum_arrays'] = np.array([10 * [block_id, thread_id, thread_id,
+                                             block_id] for block_id in
+                                       range(block_count) for thread_id in
+                                       range(threads_per_block)],
+                                      dtype=np.float32).reshape(-1, 10, 4)
+    expected['sq_sum_arrays'] = np.array([10 * [100 * block_id, 100 * thread_id,
+                                             100 * thread_id, 100 * block_id]
+                                       for block_id in range(block_count)
+                                       for thread_id in range(threads_per_block)
+                                       ], dtype=np.float32).reshape(-1, 10, 4)
+    expected['cardinality_arrays'] = np.array([10 * [block_id]
+                                    for block_id in range(block_count)
+                                    for thread_id in range(threads_per_block)],
+                                    dtype=np.uint32)
+    expected['net_id_arrays'] = np.array([10 * [thread_id]
+                                    for block_id in range(block_count)
+                                    for thread_id in range(threads_per_block)],
+                                    dtype=np.int32)
+
 
     for key in data.keys():
         # Since the order of the CUDA results is non-deterministic, sort data

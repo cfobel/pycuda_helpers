@@ -44,7 +44,7 @@ jinja_env = Environment(loader=get_template_loader())
 
 
 def get_cuda_function(template_name, function_namebase, dtype=None,
-        template_params=None, supported_types=None):
+        template_params=None, supported_types=None, keep=False):
     if supported_types is None:
         supported_types = dtype_map.keys()
     if template_params is None:
@@ -52,7 +52,7 @@ def get_cuda_function(template_name, function_namebase, dtype=None,
 
     code_template = jinja_env.get_template(template_name)
     mod = SourceModule(code_template.render(template_params), no_extern_c=True,
-            include_dirs=[get_include_root(),
+            keep=keep, include_dirs=[get_include_root(),
                     '/home/christian/Documents/dev/fpga_placement/VPR_v5/VPR_HET/pyvpr/pycuda_include',])
 
     if dtype is None:
